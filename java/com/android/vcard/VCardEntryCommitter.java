@@ -70,7 +70,15 @@ public class VCardEntryCommitter implements VCardEntryHandler {
         final long start = System.currentTimeMillis();
         mOperationList = vcardEntry.constructInsertOperations(mContentResolver, mOperationList);
         mCounter++;
-        if (mCounter >= 20) {
+        //because the max batch size is 500 defined in ContactsProvider,so we can enlarge this batch
+        //size to reduce db open/close times. From testing results, we can see performance better
+        //when batch size is more bigger.And also each vcardEntry may have some operation records.
+        //So we set threshold as 450, batch operations will be executed when threshold reached.
+        //Testing result.
+        //batch size                  : 100    200    300    400    450    490    20(mCounter)
+        //consume time(10000 contacts): 178s   143s   127s   124s   119s   117s   195s
+        //consume time (1000 contacts): 17.3s  13.9s  12.6s  12.2s  11.8s  11.6s  19.8s
+        if (mOperationList != null && mOperationList.size() >= 450) {
             mCreatedUris.add(pushIntoContentResolver(mOperationList));
             mCounter = 0;
             mOperationList = null;
